@@ -1,0 +1,62 @@
+# This script generates a parametric spiral staircase in SketchUp.
+# The user can define parameters such as step height, radius, and the number of steps.
+
+require 'sketchup.rb'
+
+module Examples
+  module ComplexSpiralStaircase
+
+    # Method to create a spiral staircase
+    def self.create_spiral_staircase(number_of_steps, step_height, radius)
+      model = Sketchup.active_model
+      entities = model.active_entities
+      model.start_operation('Create Spiral Staircase', true)
+
+      # Base point for the staircase
+      base_point = ORIGIN
+
+      # Loop to create each step
+      number_of_steps.times do |i|
+        # Calculate the angle and elevation for each step
+        angle = 360.0 / number_of_steps * i
+        elevation = step_height * i
+
+        # Create a transformation for each step
+        tr = Geom::Transformation.rotation(base_point, Z_AXIS, angle.degrees)
+        tr *= Geom::Transformation.translation([radius, 0, elevation])
+
+        # Define the points of a step
+        points = [
+          [0, 0, 0],
+          [10, 0, 0], # 10 is the tread depth
+          [10, 0, step_height],
+          [0, 0, step_height]
+        ]
+
+        # Transform the points and add the face to the entities
+        transformed_points = points.map { |pt| tr * pt }
+        face = entities.add_face(transformed_points)
+        face.reverse! if face.normal.dot(Z_AXIS) < 0
+      end
+
+      model.commit_operation
+    end
+
+    # Method to prompt user for parameters and call the staircase creation
+    def self.prompt_user
+      prompts = ["Number of Steps", "Step Height", "Radius"]
+      defaults = [20, 6, 50]
+      input = UI.inputbox(prompts, defaults, "Enter Spiral Staircase Parameters")
+      create_spiral_staircase(input[0].to_i, input[1].to_f, input[2].to_f)
+    end
+
+    unless file_loaded?(__FILE__)
+      menu = UI.menu('Plugins')
+      menu.add_item('Create Spiral Staircase') {
+        self.prompt_user
+      }
+      file_loaded(__FILE__)
+    end
+
+  end # module ComplexSpiralStaircase
+end # module Examples
